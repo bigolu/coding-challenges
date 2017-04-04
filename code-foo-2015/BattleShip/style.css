@@ -1,0 +1,49 @@
+body{
+	background-image: url("sea.jpg");
+}
+
+h1{
+	font-size: 80px;
+	text-align: center;
+	position: relative;
+}
+
+h3{
+	text-align: center;
+	font-size: 40px;
+}
+
+#pageTitle{
+	height: 20%;
+	width: 100%;
+}
+
+#content{
+	height: 78%;
+	width: 100%;
+}
+
+#grid1{
+	height: 100%;
+	width: 45%;
+	float: left;
+}
+
+#grid2{
+	height: 100%;
+	width: 45%;
+	float: right;
+}
+
+#ships td{
+	border: 2px solid;
+	width: 10%;
+	background-color: white;
+}
+
+#hits td{
+	border: 2px solid;
+	width: 10%;
+	background-color: white;
+}
+
