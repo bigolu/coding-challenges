@@ -1,0 +1,280 @@
+/********************** IMPORTS ********************/
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Scanner;
+
+/********************** SUB CLASSES ****************/
+class Neighbor{
+	public int vertexNum;
+	public Neighbor next;
+	
+	public Neighbor(int vnum, Neighbor next){
+		this.vertexNum = vnum;
+		this.next = next;
+	}
+}
+
+class Vertex{
+	String name;
+	Neighbor adjList;
+	int vNum;
+	String version;
+	
+	public Vertex(String name, Neighbor adjList, int vNum, String version){
+		this.name = name;
+		this.adjList = adjList;
+		this.vNum = vNum;
+		this.version = version;
+	}
+}
+
+class Island{
+	HashMap<String, Vertex> graph;
+	int size;
+	
+	public Island(HashMap<String, Vertex> names){
+		this.graph = names;
+		this.size = names.size();
+	}
+}
+
+
+public class Infection {
+	
+	private HashMap<String, Vertex> graph; // graph
+	private Vertex[] vertex_numbers; // for instant access to vertex given a person's vertex Number
+	private int size; //number of people in the graph
+	private ArrayList<Island> islands; // subgraphs
+	private int num_infected; //number of people with most current software
+	private String current_version;
+	
+	public Infection(String file) throws FileNotFoundException {
+		Scanner sc = new Scanner(new File(file)); 
+		
+		if(!sc.hasNext()){ //check for empty input file
+			sc.close();
+			return;
+		}
+		
+		this.graph = new HashMap<String, Vertex>();
+		this.vertex_numbers = new Vertex[sc.nextInt()];
+		this.islands = new ArrayList<Island>();
+		this.size = vertex_numbers.length;
+		this.num_infected = vertex_numbers.length;
+		this.current_version = "v0";
+		
+		sc.nextLine(); //skip over line with number of friends
+		
+		/* populate graph */
+		for(int i =0; i < size; i++){ //add people to graph
+			String name = sc.nextLine().toLowerCase();
+			Vertex v = new Vertex(name, null, i, current_version);
+			
+			graph.put(name, v);
+			vertex_numbers[i] = v;
+		}
+		while(sc.hasNextLine()){ //add to the adjacency list of each person
+			String[] pair = sc.nextLine().split("[|]");
+			makePair(pair[0].toLowerCase(), pair[1].toLowerCase(), graph);
+			makePair(pair[1].toLowerCase(), pair[0].toLowerCase(), graph);
+		}
+		
+		this.islands = makeIslands(this.graph); //create islands
+		
+		sc.close();
+	}
+	
+	/**
+	 * Gives a user, and all other users in their subgraph, the new version of the software
+	 * 
+	 * @param user
+	 */
+	public void total_infection(String user, String version){
+		if(this.current_version != version){
+			this.num_infected = 0;
+			this.current_version = version;
+		}
+		
+		HashMap<String, Vertex> subgraph = findIsland(user).graph; //get subgraph containing the input user
+		infect(subgraph, version);
+		return;
+	}
+	
+	/**
+	 * Attempts to infect a particular amount of users within a specific bound
+	 * 
+	 * @param num_users
+	 * @param error_bound: number from 0 to 100 specifying percent error allowed for number of users infected
+	 */
+	public void limited_infection(int num_users, double error_bound, String version){
+		if(this.current_version != version){
+			this.num_infected = 0;
+			this.current_version = version;
+		}
+		
+		double difference = (double) this.graph.size() * (error_bound / 100.0);
+		
+		for(int i = 0; i < this.islands.size(); i++){
+			if(Math.abs(this.islands.get(i).size - num_users) <= difference){
+				infect(this.islands.get(i).graph, version);
+				break;
+			}
+		}
+		
+		return;
+	}
+	
+	/********************** UTILITIES ***********************/
+	
+	/**
+	 * Infect all users in a given graph
+	 * 
+	 * @param graph
+	 */
+	private void infect(HashMap<String, Vertex> graph, String new_version){
+		Iterator<String> iterator = graph.keySet().iterator(); 
+		while(iterator.hasNext()){ // change all people in subgraph to new version
+			Vertex person = graph.get(iterator.next());
+			if(person.version != new_version){
+				person.version = new_version;
+				this.num_infected++;
+			}
+		}
+	}
+	
+	/**
+	 * Finds all subgraphs in a given graph and returns them.
+	 * 
+	 * @param graph: a graph
+	 * @return a list of all subgraphs contained in the input graph
+	 */
+	private ArrayList<Island> makeIslands(HashMap<String, Vertex> graph){
+		ArrayList<Island> islands = new ArrayList<Island>(); //holds all islands
+		
+		boolean[] visited = new boolean[vertex_numbers.length]; //keep track of all people visited in the graph
+		
+		/* Find all people connected to a single person and create an island */
+		Iterator<String> iterator = graph.keySet().iterator(); //generate list of keys in hashmap
+		while(iterator.hasNext()){
+			String name = iterator.next();
+			if(!visited[graph.get(name).vNum]){
+				ArrayList<String> group = allVertices(new ArrayList<String>(), name, new boolean[vertex_numbers.length], graph); 
+				
+				for(String person : group){ //mark people in subgraph as visited
+					visited[graph.get(person).vNum] = true;
+				}
+				
+				HashMap<String, Vertex> temp = new HashMap<String, Vertex>();
+				for(String person : group){ //add people to subgraph
+					temp.put(person, graph.get(person));
+				}
+				
+				islands.add(new Island(temp));
+			}
+		}
+		
+		return islands;
+	}
+	
+	/**
+	 * Given a single person, this method finds all other people in that subgraph
+	 * 
+	 * @param group: empty arraylist to store names of all people in subgraph
+	 * @param name: person in the given subgraph
+	 * @param visited: empty boolean[] to keep track of people visited in subgraph
+	 * @param graph: graph to which input person belongs
+	 * @return: list of all people in the subgraph
+	 */
+	private ArrayList<String> allVertices(ArrayList<String> group, String name, boolean[] visited, HashMap<String, Vertex> graph){
+		if(!visited[graph.get(name).vNum]){
+			visited[graph.get(name).vNum] = true;
+			group.add(name);
+		}
+		
+		if(graph.get(name) != null){
+			Neighbor nbr = graph.get(name).adjList;
+			for(; nbr != null; nbr = nbr.next){
+				if(!visited[nbr.vertexNum]){
+					allVertices(group, vertex_numbers[nbr.vertexNum].name, visited, graph);
+				}
+			}
+		}
+		
+		return group;
+	}
+	
+	/**
+	 * takes a person, p2, and them to p1's adjacency list
+	 * 
+	 * @param p1: teacher/student
+	 * @param p2: teacher/student
+	 * @param graph: entire graph
+	 */
+	private void makePair(String p1, String p2, HashMap<String, Vertex> graph){
+		graph.get(p1).adjList = new Neighbor(graph.get(p2).vNum, graph.get(p1).adjList);
+		return;
+	}
+	
+	/**
+	 * Determine if input person is in the graph
+	 * 
+	 * @param name
+	 * @return
+	 */
+	public boolean hasPerson(String name){
+		return this.graph.containsKey(name);
+	}
+	
+	/**
+	 * Finds and returns island containing the input user
+	 * 
+	 * @param name
+	 * @return
+	 */
+	private Island findIsland(String name){
+		for(int i = 0; i < this.islands.size(); i++){
+			Island island = this.islands.get(i);
+			if(island.graph.containsKey(name)){
+				return island;
+			}
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Prints a graph and its subgraphs to standard out
+	 * 
+	 * @param graph
+	 */
+	public String toString(){
+		/* print whole graph */
+		String output = "Number of people with most current software: " + this.num_infected;
+		/*output += "\n*********** Entire Graph ************\n\n";
+		Iterator<String> iterator = this.graph.keySet().iterator(); //generate list of keys in hashmap
+		while(iterator.hasNext()){
+			Vertex person = graph.get(iterator.next());
+			output += "Name: " + person.name + "\tVersion: " + person.version + "\n";
+		}
+		output += "\n";*/
+		
+		/* print subgraphs */
+		output += "\n*********** Sub Graphs ************\n\n";
+		for(int i = 0; i < this.islands.size(); i++){
+			output += "Subgraph #" + (i+ 1) + ":\n";
+			output += "------------------\n";
+			Iterator<String> it = this.islands.get(i).graph.keySet().iterator(); //generate list of keys in hashmap
+			while(it.hasNext()){
+				Vertex person = graph.get(it.next());
+				output += "Name: " + person.name + "\tVersion: " + person.version + "\n";
+			}
+			output += "\n";
+		}
+		
+		return output;
+	}
+	
+}

@@ -1,0 +1,81 @@
+/**
+ * This program is used to model various algorithms used in releasing updated versions of software in stages. 
+ * 
+ * @author Olaolu Emmanuel
+ * @version 1.0
+ */
+
+/************************* IMPORTS **********************/
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.Scanner;
+
+
+public class Driver {
+	
+	/**
+	 * @param Will ask for filename containing list of users and their relationships (who is coaching who)
+	 * @throws IOException
+	 */
+	public static void main(String[] args) throws IOException {
+		/* prompt user for filename until input file is found */
+		System.out.print("Please enter filename: ");
+		String filename;
+		while(true){
+			try{
+				filename = new Scanner(System.in).nextLine(); // get filename
+				new Scanner(new File(filename)); // ensure file exists
+				break;
+			}
+			catch(FileNotFoundException f){
+				System.out.println("File not found, please try again.");
+			}
+		}
+		
+		Infection infection = new Infection(filename); 
+		
+		while(true){
+			/* prompt user */
+			System.out.println();
+			System.out.println("1. Total Infection");
+			System.out.println("2. Limited Infection");
+			System.out.println("3. Quit");
+			System.out.println();
+			System.out.print("Select 1 - 3: ");
+			
+			int selection = new Scanner(System.in).nextInt();
+			
+			switch(selection){
+				case 1: //total infection
+					System.out.print("Enter name of first person: ");
+					String start = new Scanner(System.in).nextLine();
+					
+					if(!infection.hasPerson(start)){
+						System.out.println("This person is not in the user base.");
+					}
+					else{
+						System.out.println("********************* User base before:\n\n *********************");
+						System.out.println(infection);
+						infection.total_infection(start);
+						System.out.println("*********************User base after:\n\n *********************");
+						System.out.println(infection);
+					}
+					break;
+				case 2: //limited infection
+					System.out.println("Enter number of users to be infected: ");
+					int num_users = new Scanner(System.in).nextInt();
+					System.out.println();
+					// call the method
+					break;
+				case 3: //end program
+					System.out.println("Session ended.");
+					return;
+				default: 
+					System.out.println("Invalid entry.");
+					System.out.println();
+			}
+		}
+	}
+	
+}
